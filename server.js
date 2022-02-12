@@ -1,54 +1,66 @@
 <html>
   <body>
-    <h1>Todo</h1>
-
-    <form id="sign">
-      <input id="alias" placeholder="username">
-      <input id="pass" type="password" placeholder="passphrase">
-      <input id="in" type="submit" value="sign in">
-      <input id="up" type="button" value="sign up">
-    </form>
+    <h1>Todos</h1>
 
     <ul></ul>
 
-    <form id="said">
-        <input id="say">
-        <input id="speak" type="submit" value="speak">
-    </form>
+    <form><input><button>Add</button></form>
 
-    <script src="https://cdn.jsdelivr.net/npm/gun/examples/jquery.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
-    <!-- script src="https://cdn.jsdelivr.net/npm/gun/lib/webrtc.js"></script -->
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
     <script>
-    var gun = Gun(['http://localhost:8765/gun', 'https://gun-manhattan.herokuapp.com/gun']);
-    var user = gun.user();
+      var todos = Gun().get('todos')
 
-    $('#up').on('click', function(e){
-      user.create($('#alias').val(), $('#pass').val());
-    });
+      $('form').on('submit', function (event) {
+        var input = $('form').find('input')
+        todos.set({title: input.val()})
+        input.val('')
+        event.preventDefault()
+      })
 
-    $('#sign').on('submit', function(e){
-      e.preventDefault();
-      user.auth($('#alias').val(), $('#pass').val());
-    });
+      todos.map().on(function (todo, id) {
+        var li = $('#' + id)
+        if (!li.get(0)) {
+          li = $('<li>').attr('id', id).appendTo('ul')
+        }
+        if (todo) {
+          var html = '<span onclick="clickTitle(this)">' + todo.title + '</span>'
+          html = '<input type="checkbox" onclick="clickCheck(this)" ' + (todo.done ? 'checked' : '') + '>' + html
+          html += '<img onclick="clickDelete(this)" src="https://cdnjs.cloudflare.com/ajax/libs/foundicons/3.0.0/svgs/fi-x.svg"/>'
+          li.html(html)
+        } else {
+          li.remove()
+        }
+      })
+      function clickTitle (element) {
+        element = $(element)
+        if (!element.find('input').get(0)) {
+          element.html('<input value="' + element.html() + '" onkeyup="keypressTitle(this)">')
+        }
+      }
 
-    $('#said').on('submit', function(e){
-      e.preventDefault();
-      if(!user.is){ return }
-      user.get('said').set($('#say').val());
-      $('#say').val("");
-    });
+      function keypressTitle (element) {
+        if (event.keyCode === 13) {
+          todos.get($(element).parent().parent().attr('id')).put({title: $(element).val()})
+        }
+      }
+      
+      function clickCheck (element) {
+        todos.get($(element).parent().attr('id')).put({done: $(element).prop('checked')})
+      }
 
-    function UI(say, id){
-      var li = $('#' + id).get(0) || $('<li>').attr('id', id).appendTo('ul');
-      $(li).text(say);
-    };
-
-    gun.on('auth', function(){
-      $('#sign').hide();
-      user.get('said').map().once(UI);
-    });
+      function clickDelete (element) {
+        todos.get($(element).parent().attr('id')).put(null)
+      }
     </script>
+    
+    <style>
+      ul { padding: 0; }
+      li { display: flex; }
+      li span { width: 150px; word-break: break-all; }
+      img { height: 20px; margin-left: 8px; cursor: pointer; }
+      input { width: 150px; margin-right: 8px; }
+      input[type='checkbox'] { width: auto; }
+    </style>
   </body>
 </html>
